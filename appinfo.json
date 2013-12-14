@@ -1,0 +1,16 @@
+{
+  "uuid": "ef6cdd79-6cee-42ac-8de7-7ee915335caa",
+  "shortName": "Discs",
+  "longName": "Discs",
+  "companyName": "Jon Eisen",
+  "versionCode": 1,
+  "versionLabel": "1.0.0",
+  "watchapp": {
+    "watchface": true
+  },
+  "appKeys": {
+  },
+  "resources": {
+    "media": []
+  }
+}
