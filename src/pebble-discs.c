@@ -1,75 +1,100 @@
 #include <pebble.h>
-#include <math.h>
+#include <time.h>
 
-static const uint16_t CENTER_DISC_RADIUS = 20;
-static const uint16_t HOUR_DISC_RADIUS = 10;
-static const uint16_t MINUTE_DISC_RADIUS = 5;
+static const int FACE_DISC_RADIUS = 70;
+static const int CENTER_DISC_RADIUS = 20;
+static const int HOUR_DISC_RADIUS = 10;
+static const int MINUTE_DISC_RADIUS = 5;
 
-static const uint16_t HOUR_ROT_RADIUS = 40;
-static const uint16_t MINUTE_ROT_RADIUS = 60;
+static const int HOUR_ROT_RADIUS = 40;
+static const int MINUTE_ROT_RADIUS = 60;
+
+static const GColor WINDOW_COLOR = GColorBlack;
+static const GColor FACE_COLOR = GColorWhite;
+static const GColor DISC_COLOR = GColorBlack;
 
 static Window *window;
+static Layer *Face;
 static Layer *Center;
 static Layer *Hour;
 static Layer *Minute;
 
-static uint16_t MinuteLocation = 0;
-static uint16_t HourLocation = 0;
-
-#define TAU 6.283185307179586
-
 // Calculate a center point for any disc with a given radius and clock location (a number from 0 to 359 representing 1 degree each)
-GPoint calculate_center_point(uint16_t radius, uint16_t location) {
-  double radians = ((double) location) / TAU;
-  GPoint point = {
-    72 - radius * sin(radians),
-    84 - radius * cos(radians)
-  };
-  return point;
+GPoint calculate_center_point(int radius, int32_t angle) {
+  GPoint center;
+
+  center.y = 84 + (-cos_lookup(angle) * radius / TRIG_MAX_RATIO);
+  center.x = 72 + (sin_lookup(angle) * radius / TRIG_MAX_RATIO);
+
+  return center;
 }
 
-uint16_t time_to_hour_location(struct tm *tick_time) {
-  return tick_time->tm_hour * 30 + tick_time->tm_min / 2;
+int32_t time_to_hour_angle(struct tm *tick_time) {
+  return TRIG_MAX_ANGLE * ((tick_time->tm_hour % 12) * 60 + tick_time->tm_min) / 720;
 }
 
-uint16_t time_to_minute_location(struct tm *tick_time) {
-  return tick_time->tm_min * 6 + tick_time->tm_sec / 10;
+int32_t time_to_minute_angle(struct tm *tick_time) {
+  return TRIG_MAX_ANGLE * ((tick_time->tm_min * 60) + tick_time->tm_sec) / 3600;
+}
+
+static void face_update_proc(Layer *layer, GContext *ctx) {
+  graphics_context_set_fill_color(ctx, GColorWhite);
+  graphics_fill_circle(ctx, calculate_center_point(0,0), FACE_DISC_RADIUS);
 }
 
 static void center_update_proc(Layer *layer, GContext *ctx) {
-  graphics_draw_circle(ctx, calculate_center_point(0,0), CENTER_DISC_RADIUS);
+  graphics_context_set_fill_color(ctx, DISC_COLOR);
+  graphics_fill_circle(ctx, calculate_center_point(0,0), CENTER_DISC_RADIUS);
 }
 
 static void hour_update_proc(Layer *layer, GContext *ctx) {
-  graphics_draw_circle(ctx, calculate_center_point(HOUR_ROT_RADIUS, HourLocation), HOUR_DISC_RADIUS);
+  time_t now = time(NULL);
+  struct tm *t = localtime(&now);
+  int32_t hour_angle = time_to_hour_angle(t);
+  GPoint center = calculate_center_point(HOUR_ROT_RADIUS, hour_angle);
+
+  graphics_context_set_fill_color(ctx, DISC_COLOR);
+  graphics_fill_circle(ctx, center, HOUR_DISC_RADIUS);
 }
 
 static void minute_update_proc(Layer *layer, GContext *ctx) {
-  graphics_draw_circle(ctx, calculate_center_point(MINUTE_ROT_RADIUS, MinuteLocation), MINUTE_DISC_RADIUS);
+  time_t now = time(NULL);
+  struct tm *t = localtime(&now);
+  int32_t minute_angle = time_to_minute_angle(t);
+  GPoint center = calculate_center_point(MINUTE_ROT_RADIUS, minute_angle);
+
+  graphics_context_set_fill_color(ctx, DISC_COLOR);
+  graphics_fill_circle(ctx, center, MINUTE_DISC_RADIUS);
 }
 
 static void tick_minute_handler(struct tm *tick_time, TimeUnits units_changed) {
-  HourLocation = time_to_hour_location(tick_time);
-  MinuteLocation = time_to_minute_location(tick_time);
-
-  layer_mark_dirty(Hour);
-  layer_mark_dirty(Minute);
+  layer_mark_dirty(window_get_root_layer(window));
 }
 
 static void window_load(Window *window) {
-  Layer *window_layer = window_get_root_layer(window);
-  GRect bounds = layer_get_bounds(window_layer);
+  window_set_background_color(window, WINDOW_COLOR);
 
+  Layer *window_layer = window_get_root_layer(window);
+  GRect bounds = GRect(0, 0, 144, 168);
+
+  Face = layer_create(bounds);
   Center = layer_create(bounds);
   Hour = layer_create(bounds);
   Minute = layer_create(bounds);
 
+  layer_set_update_proc(Face, face_update_proc);
   layer_set_update_proc(Center, center_update_proc);
   layer_set_update_proc(Hour, hour_update_proc);
   layer_set_update_proc(Minute, minute_update_proc);
+
+  layer_add_child(window_layer, Face);
+  layer_add_child(Face, Center);
+  layer_add_child(Face, Hour);
+  layer_add_child(Face, Minute);
 }
 
 static void window_unload(Window *window) {
+  layer_destroy(Face);
   layer_destroy(Center);
   layer_destroy(Hour);
   layer_destroy(Minute);
@@ -84,7 +109,7 @@ static void init(void) {
   const bool animated = true;
   window_stack_push(window, animated);
 
-  tick_timer_service_subscribe(MINUTE_UNIT, tick_minute_handler);
+  tick_timer_service_subscribe(SECOND_UNIT, tick_minute_handler);
 }
 
 static void deinit(void) {
