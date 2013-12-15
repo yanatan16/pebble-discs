@@ -2,6 +2,8 @@
 
 This is a [pebble](http://getpebble.com) watchface which uses a minimalist set of 4 overlapping discs to show analog time.
 
+_Note_: This watchface is built for pebble 2.0 and will be available when that is released soon.
+
 ## Previews
 
 ![Preview image at noon](https://github.com/yanatan16/pebble-discs/blob/master/resources/preview_noon.png?raw=true)
