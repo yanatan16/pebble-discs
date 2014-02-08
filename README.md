@@ -6,9 +6,9 @@ _Note_: This watchface is built for pebble 2.0 and will be available when that i
 
 ## Previews
 
-![Preview image at noon](https://github.com/yanatan16/pebble-discs/blob/master/resources/preview_noon.png?raw=true)
+![Preview image at noon](https://raw.github.com/yanatan16/pebble-discs/master/resources/preview_noon.png)
 
-![Preview image at 10:30](https://github.com/yanatan16/pebble-discs/blob/master/resources/preview_tenthirty.png?raw=true)
+![Preview image at 10:30](https://raw.github.com/yanatan16/pebble-discs/master/resources/preview_tenthirty.png)
 
 ## How to build
 
